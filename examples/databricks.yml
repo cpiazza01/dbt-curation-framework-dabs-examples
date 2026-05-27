@@ -5,6 +5,9 @@ workspace:
   root_path: /Workspace/${var.domain}/dbt-curation/.bundle/${bundle.name}/${bundle.target}
 
 variables:
+  domain:
+    description: "Domain within the Databricks workspace to deploy to; used as part of the root path for this bundle's workspace resources, as well as for tagging purposes"
+    default: example-domain
   env:
     description: "Deployment environment (dev/test/prod)"
     default: dev
@@ -53,4 +56,3 @@ targets:
 
 include:
   - resources/*.yml
-  
