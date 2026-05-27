@@ -39,7 +39,7 @@ jobs:
 
       - name: Generate bundle artifacts
         working-directory: ${{ github.event.inputs.bundle }}
-        run: dbt-curation-generate --config dbt_curation_config.yaml --env prod
+        run: dbt-curation-generate --config dbt_curation_config.yaml --target prod
 
       - name: Deploy
         working-directory: ${{ github.event.inputs.bundle }}

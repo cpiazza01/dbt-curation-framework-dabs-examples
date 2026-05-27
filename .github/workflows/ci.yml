@@ -87,7 +87,7 @@ jobs:
 
       - name: Generate bundle artifacts
         working-directory: ${{ matrix.bundle }}
-        run: dbt-curation-generate --config dbt_curation_config.yaml --env dev
+        run: dbt-curation-generate --config dbt_curation_config.yaml --target dev
 
       - name: Validate bundle
         working-directory: ${{ matrix.bundle }}
@@ -125,7 +125,7 @@ jobs:
 
       - name: Generate bundle artifacts
         working-directory: ${{ matrix.bundle }}
-        run: dbt-curation-generate --config dbt_curation_config.yaml --env dev
+        run: dbt-curation-generate --config dbt_curation_config.yaml --target dev
 
       - name: Deploy
         working-directory: ${{ matrix.bundle }}
@@ -163,7 +163,7 @@ jobs:
 
       - name: Generate bundle artifacts
         working-directory: ${{ matrix.bundle }}
-        run: dbt-curation-generate --config dbt_curation_config.yaml --env test
+        run: dbt-curation-generate --config dbt_curation_config.yaml --target test
 
       - name: Deploy
         working-directory: ${{ matrix.bundle }}
