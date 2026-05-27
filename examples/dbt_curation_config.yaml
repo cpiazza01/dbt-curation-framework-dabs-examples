@@ -1,0 +1,53 @@
+job_name: dbt-curation-framework-dabs-examples
+domain: example-domain
+
+email_notifications:
+  - data-team@acme-corp.com
+  - data-lead@acme-corp.com
+
+# Run at 3 AM Central every day after silver layer loads complete; paused by default
+schedule:
+  quartz_cron_expression: "0 0 3 * * ?"
+  timezone_id: America/Chicago
+  pause_status: PAUSED
+
+# Override the default commands to pass the catalog variable into dbt at runtime
+dbt_commands:
+  - dbt deps
+  - "dbt build --vars '{catalog: ${var.catalog}}'"
+
+# Pin to a specific dbt-databricks minor range for reproducible builds
+dbt_version: ">=1.9.0,<2.0.0"
+
+# Trigger a downstream reporting pipeline job after dbt completes
+trigger_downstream_job: true
+downstream_job_id: ${var.downstream_job_id}
+
+# Grant the upstream service principal CAN_MANAGE_RUN — resolved per environment via the
+# upstream_service_principal_id lookup variable defined in databricks.yml
+service_principal_job_runners:
+  - ${var.upstream_service_principal_id}
+
+# Additional governance tags beyond the framework defaults
+tags:
+  Team: data-platform
+  CostCenter: engineering
+
+# Notify on success during initial rollout; disable once stable
+email_on_success: true
+
+# Kill the job if it runs longer than 2 hours
+timeout_seconds: 7200
+
+# Retry once on failure with a 60-second back-off; also retry if the job times out
+max_retries: 0
+retry_on_timeout: true
+min_retry_interval_millis: 60000
+
+# Disable Databricks auto-optimization for predictable task execution behaviour
+disable_auto_optimization: true
+
+# Use standard performance; set to PERFORMANCE_OPTIMIZED to enable Photon acceleration
+performance_target: STANDARD
+
+

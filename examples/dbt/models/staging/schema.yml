@@ -1,0 +1,227 @@
+version: 2
+
+sources:
+  - name: silver
+    database: "{{ var('catalog') }}"
+    schema: silver
+    tables:
+      - name: patients
+      - name: encounters
+      - name: observations
+      - name: providers
+
+models:
+  - name: stg_patients
+    description: "Staging view for patient demographics sourced from the silver patients table. Adds is_active flag and renames dbx_load_time."
+    columns:
+      - name: member_id
+        description: "Unique patient identifier"
+        tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: "Patient first name"
+      - name: last_name
+        description: "Patient last name"
+      - name: date_of_birth
+        description: "Patient date of birth"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: "'1900-01-01'"
+              max_value: "current_date()"
+              row_condition: "date_of_birth is not null"
+      - name: death_date
+        description: "Date of death; null if the patient is still living"
+      - name: is_active
+        description: "True if the patient has no recorded death date, false otherwise"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: [true, false]
+      - name: gender
+        description: "Patient gender"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: ['M', 'F']
+              row_condition: "gender is not null"
+      - name: race
+        description: "Patient race"
+      - name: ethnicity
+        description: "Patient ethnicity"
+      - name: marital_status
+        description: "Patient marital status"
+      - name: address
+        description: "Street address"
+      - name: city
+        description: "City of residence"
+      - name: state
+        description: "State of residence"
+      - name: county
+        description: "County of residence"
+      - name: zip
+        description: "ZIP code of residence"
+      - name: healthcare_expenses
+        description: "Total out-of-pocket healthcare expenses incurred by the patient"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "healthcare_expenses is not null"
+      - name: healthcare_coverage
+        description: "Total healthcare costs covered by the patient's payer"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "healthcare_coverage is not null"
+      - name: income
+        description: "Annual household income"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "income is not null"
+      - name: last_updated_at
+        description: "Timestamp when the record was last loaded into the silver layer"
+
+  - name: stg_encounters
+    description: "Staging view for healthcare encounters sourced from the silver encounters table. Adds member_responsibility and encounter_duration_days derived fields."
+    columns:
+      - name: encounter_id
+        description: "Unique encounter identifier"
+        tests:
+          - unique
+          - not_null
+      - name: member_id
+        description: "Foreign key to the patient who had the encounter"
+        tests:
+          - not_null
+      - name: organization_id
+        description: "Identifier of the healthcare organization where the encounter took place"
+      - name: provider_id
+        description: "Identifier of the provider who delivered care"
+      - name: payer_id
+        description: "Identifier of the insurance payer for this encounter"
+      - name: encounter_class
+        description: "Class of encounter (e.g. ambulatory, emergency, inpatient, wellness, outpatient, urgentcare)"
+      - name: encounter_code
+        description: "Clinical code identifying the type of encounter"
+      - name: encounter_description
+        description: "Human-readable description of the encounter type"
+      - name: encounter_start_ts
+        description: "Timestamp when the encounter began"
+        tests:
+          - not_null
+      - name: encounter_end_ts
+        description: "Timestamp when the encounter ended; null if not yet completed"
+      - name: base_encounter_cost
+        description: "Base cost of the encounter before payer adjustments"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "base_encounter_cost is not null"
+      - name: total_claim_cost
+        description: "Total billed cost of the encounter"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "total_claim_cost is not null"
+      - name: payer_coverage
+        description: "Amount of the total claim cost covered by the payer"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "payer_coverage is not null"
+      - name: member_responsibility
+        description: "Amount the member owes after payer coverage (total_claim_cost minus payer_coverage)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "member_responsibility is not null"
+      - name: reason_code
+        description: "Clinical code for the primary reason of the encounter"
+      - name: reason_description
+        description: "Human-readable description of the encounter reason"
+      - name: encounter_duration_days
+        description: "Duration of the encounter in days; null for same-day or open encounters"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "encounter_duration_days is not null"
+      - name: last_updated_at
+        description: "Timestamp when the record was last loaded into the silver layer"
+
+  - name: stg_observations
+    description: "Staging view for clinical observations sourced from the silver observations table. Excludes records with null values."
+    columns:
+      - name: member_id
+        description: "Foreign key to the patient the observation belongs to"
+        tests:
+          - not_null
+      - name: encounter_id
+        description: "Foreign key to the encounter during which the observation was recorded"
+      - name: observation_date
+        description: "Date the observation was recorded (truncated from the source observation_ts timestamp)"
+        tests:
+          - not_null
+      - name: category
+        description: "Clinical category of the observation (e.g. vital-signs, laboratory)"
+      - name: loinc_code
+        description: "LOINC code identifying the type of observation"
+        tests:
+          - not_null
+      - name: description
+        description: "Human-readable description of the observation type"
+      - name: value
+        description: "Recorded value of the observation"
+        tests:
+          - not_null
+      - name: units
+        description: "Unit of measure for the observation value (e.g. cm, kg, mm[Hg])"
+      - name: observation_type
+        description: "Data type of the observation value (e.g. numeric, text)"
+      - name: last_updated_at
+        description: "Timestamp when the record was last loaded into the silver layer"
+
+  - name: stg_providers
+    description: "Staging view for healthcare providers sourced from the silver providers table. Filtered to current records only (__END_AT IS NULL)."
+    columns:
+      - name: provider_id
+        description: "Unique provider identifier"
+        tests:
+          - unique
+          - not_null
+      - name: organization_id
+        description: "Identifier of the organization the provider is affiliated with"
+      - name: provider_name
+        description: "Full name of the provider"
+        tests:
+          - not_null
+      - name: gender
+        description: "Provider gender"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: ['M', 'F']
+              row_condition: "gender is not null"
+      - name: specialty
+        description: "Provider medical specialty (e.g. GENERAL PRACTICE, CARDIOLOGY)"
+        tests:
+          - not_null
+      - name: address
+        description: "Provider practice street address"
+      - name: city
+        description: "City of the provider's practice"
+      - name: state
+        description: "State of the provider's practice"
+      - name: zip
+        description: "ZIP code of the provider's practice"
+      - name: total_encounters
+        description: "Cumulative number of encounters the provider has conducted"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "total_encounters is not null"
+      - name: total_procedures
+        description: "Cumulative number of procedures the provider has performed"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "total_procedures is not null"
+      - name: last_updated_at
+        description: "Timestamp when the record was last loaded into the silver layer"

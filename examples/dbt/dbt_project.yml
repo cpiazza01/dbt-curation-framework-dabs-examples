@@ -1,0 +1,24 @@
+name: dbt_curation_framework_dabs_examples
+version: "1.0.0"
+config-version: 2
+
+profile: default
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  dbt_curation_framework_dabs_examples:
+    staging:
+      +materialized: view
+      +schema: pre_gold
+    intermediate:
+      +materialized: table
+      +schema: pre_gold
+    marts:
+      +materialized: table
+      +schema: gold

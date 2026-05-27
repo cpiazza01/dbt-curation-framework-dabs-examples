@@ -1,0 +1,208 @@
+version: 2
+
+models:
+  - name: mart_member_360
+    description: "Comprehensive gold-layer member profile joining demographics, encounter history, and latest vital signs. One row per member."
+    columns:
+      - name: member_id
+        description: "Unique patient identifier"
+        tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: "Patient first name"
+      - name: last_name
+        description: "Patient last name"
+      - name: date_of_birth
+        description: "Patient date of birth"
+      - name: age_years
+        description: "Calculated age in whole years as of the current date"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 150
+              row_condition: "age_years is not null"
+      - name: gender
+        description: "Patient gender"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: ['M', 'F']
+              row_condition: "gender is not null"
+      - name: race
+        description: "Patient race"
+      - name: ethnicity
+        description: "Patient ethnicity"
+      - name: marital_status
+        description: "Patient marital status"
+      - name: city
+        description: "City of residence"
+      - name: state
+        description: "State of residence"
+      - name: county
+        description: "County of residence"
+      - name: zip
+        description: "ZIP code of residence"
+      - name: is_active
+        description: "True if the patient has no recorded death date"
+      - name: death_date
+        description: "Date of death; null if the patient is still living"
+      - name: income
+        description: "Annual household income"
+      - name: healthcare_expenses
+        description: "Total out-of-pocket healthcare expenses incurred by the patient"
+      - name: healthcare_coverage
+        description: "Total healthcare costs covered by the patient's payer"
+      - name: lifetime_encounters
+        description: "Total number of encounters across the member's history; 0 if no encounters on record"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+      - name: lifetime_claim_cost
+        description: "Total billed healthcare costs across all encounters; 0 if no encounters on record"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+      - name: lifetime_payer_coverage
+        description: "Total amount covered by the payer across all encounters; 0 if no encounters on record"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+      - name: lifetime_member_responsibility
+        description: "Total amount owed by the member across all encounters; 0 if no encounters on record"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+      - name: first_encounter_date
+        description: "Timestamp of the member's first recorded encounter; null if no encounters"
+      - name: last_encounter_date
+        description: "Timestamp of the member's most recent encounter; null if no encounters"
+      - name: days_since_last_encounter
+        description: "Number of days since the most recent encounter as of the current date; null if no encounters"
+      - name: ambulatory_encounters
+        description: "Lifetime count of ambulatory encounters; 0 if none"
+      - name: emergency_encounters
+        description: "Lifetime count of emergency department encounters; 0 if none"
+      - name: inpatient_encounters
+        description: "Lifetime count of inpatient encounters; 0 if none"
+      - name: wellness_encounters
+        description: "Lifetime count of wellness encounters; 0 if none"
+      - name: inpatient_cost
+        description: "Total billed cost for inpatient encounters; 0 if none"
+      - name: emergency_cost
+        description: "Total billed cost for emergency encounters; 0 if none"
+      - name: encounters_last_12_months
+        description: "Number of encounters in the trailing 12 months from the current date; 0 if none"
+      - name: cost_last_12_months
+        description: "Total billed cost for encounters in the trailing 12 months; 0 if none"
+      - name: bmi
+        description: "Most recent Body Mass Index reading; null if no vital signs on record"
+      - name: bmi_category
+        description: "WHO classification of the most recent BMI (Underweight, Normal, Overweight, Obese)"
+      - name: systolic_bp
+        description: "Most recent systolic blood pressure in mm[Hg]; null if no vital signs on record"
+      - name: diastolic_bp
+        description: "Most recent diastolic blood pressure in mm[Hg]; null if no vital signs on record"
+      - name: blood_pressure_category
+        description: "AHA classification of the most recent blood pressure reading (Normal, Elevated, Hypertension Stage 1, Hypertension Stage 2+)"
+      - name: heart_rate
+        description: "Most recent heart rate in beats per minute; null if no vital signs on record"
+      - name: weight_kg
+        description: "Most recent body weight in kilograms; null if no vital signs on record"
+      - name: height_cm
+        description: "Most recent body height in centimetres; null if no vital signs on record"
+      - name: latest_vital_sign_date
+        description: "Date of the most recent vital signs observation; null if no vital signs on record"
+      - name: days_since_last_vital
+        description: "Number of days since the most recent vital signs observation; null if no vitals on record"
+      - name: high_ed_utilizer
+        description: "True if the member has 2 or more emergency encounters in their history"
+      - name: has_inpatient_history
+        description: "True if the member has at least 1 inpatient encounter in their history"
+      - name: high_cost_member
+        description: "True if the member's total claim cost in the trailing 12 months exceeds $50,000"
+      - name: obese_flag
+        description: "True if the member's most recent BMI is 30 or greater"
+      - name: hypertension_flag
+        description: "True if the member's most recent blood pressure is at or above 140/90 mm[Hg]"
+      - name: dbt_updated_at
+        description: "Timestamp when this record was last refreshed by dbt"
+
+  - name: mart_monthly_financial_summary
+    description: "Gold-layer monthly financial rollup across all encounter classes. One row per calendar month. Includes month-over-month and year-over-year comparisons."
+    columns:
+      - name: encounter_month
+        description: "First day of the calendar month"
+        tests:
+          - unique
+          - not_null
+      - name: total_encounters
+        description: "Total number of encounters across all classes in this month"
+      - name: total_unique_members
+        description: "Number of distinct members who had at least one encounter in this month"
+      - name: total_unique_providers
+        description: "Number of distinct providers who delivered care in this month"
+      - name: total_claim_cost
+        description: "Sum of total_claim_cost across all encounters in this month"
+      - name: total_payer_coverage
+        description: "Sum of payer_coverage across all encounters in this month"
+      - name: total_member_responsibility
+        description: "Sum of member_responsibility across all encounters in this month"
+      - name: avg_cost_per_encounter
+        description: "Average total_claim_cost per encounter for this month"
+      - name: avg_cost_per_member
+        description: "Average total_claim_cost per unique member for this month"
+      - name: mom_cost_change
+        description: "Absolute change in total_claim_cost versus the prior calendar month; null in the first month"
+      - name: mom_cost_change_pct
+        description: "Percentage change in total_claim_cost versus the prior calendar month; null if prior month cost is zero or absent"
+      - name: mom_encounter_change
+        description: "Absolute change in total encounter count versus the prior calendar month; null in the first month"
+      - name: yoy_cost_change
+        description: "Absolute change in total_claim_cost versus the same month in the prior year; null if no data 12 months prior"
+      - name: yoy_cost_change_pct
+        description: "Percentage change in total_claim_cost versus the same month in the prior year; null if prior year cost is zero or absent"
+      - name: dbt_updated_at
+        description: "Timestamp when this record was last refreshed by dbt"
+
+  - name: mart_provider_performance_metrics
+    description: "Gold-layer provider performance table benchmarking each provider's cost and volume against their specialty average. One row per provider."
+    columns:
+      - name: provider_id
+        description: "Unique provider identifier"
+        tests:
+          - unique
+          - not_null
+      - name: provider_name
+        description: "Full name of the provider"
+      - name: specialty
+        description: "Provider medical specialty"
+      - name: city
+        description: "City of the provider's practice"
+      - name: state
+        description: "State of the provider's practice"
+      - name: total_encounters
+        description: "Total number of encounters the provider has delivered across their history"
+      - name: unique_members
+        description: "Total number of distinct members the provider has treated"
+      - name: total_claim_cost
+        description: "Sum of total_claim_cost across all of the provider's encounters"
+      - name: avg_claim_cost
+        description: "Average total_claim_cost per encounter across the provider's history"
+      - name: avg_encounter_duration_days
+        description: "Average encounter duration in days across the provider's history"
+      - name: encounters_last_12_months
+        description: "Number of encounters the provider delivered in the trailing 12 months"
+      - name: cost_last_12_months
+        description: "Sum of total_claim_cost for the provider's encounters in the trailing 12 months"
+      - name: specialty_avg_claim_cost
+        description: "Average avg_claim_cost across all providers in the same specialty"
+      - name: cost_vs_specialty_avg
+        description: "Absolute difference between this provider's avg_claim_cost and the specialty average; positive means above average"
+      - name: cost_vs_specialty_avg_pct
+        description: "Percentage difference between this provider's avg_claim_cost and the specialty average; null if specialty average is zero"
+      - name: specialty_avg_encounters_last_12_months
+        description: "Average encounters_last_12_months across all providers in the same specialty"
+      - name: volume_vs_specialty_avg
+        description: "Absolute difference between this provider's encounters_last_12_months and the specialty average; positive means above average"
+      - name: dbt_updated_at
+        description: "Timestamp when this record was last refreshed by dbt"

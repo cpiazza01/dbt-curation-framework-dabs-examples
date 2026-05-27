@@ -1,0 +1,169 @@
+version: 2
+
+models:
+  - name: int_member_encounter_summary
+    description: "One row per member summarising their full encounter history and costs. Used by mart_member_360."
+    columns:
+      - name: member_id
+        description: "Unique patient identifier"
+        tests:
+          - unique
+          - not_null
+      - name: total_encounters
+        description: "Total number of distinct encounters across the member's lifetime"
+      - name: lifetime_claim_cost
+        description: "Sum of total_claim_cost across all encounters"
+      - name: lifetime_payer_coverage
+        description: "Sum of payer_coverage across all encounters"
+      - name: lifetime_member_responsibility
+        description: "Sum of member_responsibility across all encounters"
+      - name: first_encounter_date
+        description: "Timestamp of the member's earliest encounter"
+      - name: last_encounter_date
+        description: "Timestamp of the member's most recent encounter"
+      - name: days_between_first_last_encounter
+        description: "Number of days between the first and most recent encounter"
+      - name: ambulatory_encounters
+        description: "Count of distinct ambulatory encounters"
+      - name: emergency_encounters
+        description: "Count of distinct emergency department encounters"
+      - name: inpatient_encounters
+        description: "Count of distinct inpatient encounters"
+      - name: wellness_encounters
+        description: "Count of distinct wellness encounters"
+      - name: outpatient_encounters
+        description: "Count of distinct outpatient encounters"
+      - name: urgentcare_encounters
+        description: "Count of distinct urgent care encounters"
+      - name: inpatient_cost
+        description: "Sum of total_claim_cost for inpatient encounters only"
+      - name: emergency_cost
+        description: "Sum of total_claim_cost for emergency encounters only"
+      - name: encounters_last_12_months
+        description: "Count of distinct encounters in the trailing 12 months from the current date"
+      - name: cost_last_12_months
+        description: "Sum of total_claim_cost for encounters in the trailing 12 months from the current date"
+
+  - name: int_encounter_monthly_summary
+    description: "One row per month and encounter class summarising encounter volume and costs. Used by mart_monthly_financial_summary."
+    columns:
+      - name: encounter_month
+        description: "First day of the calendar month (date_trunc of encounter_start_ts)"
+        tests:
+          - not_null
+      - name: encounter_class
+        description: "Class of encounter (e.g. ambulatory, emergency, inpatient)"
+        tests:
+          - not_null
+      - name: encounter_count
+        description: "Number of distinct encounters in this month and class"
+      - name: unique_members
+        description: "Number of distinct members with an encounter in this month and class"
+      - name: unique_providers
+        description: "Number of distinct providers who delivered care in this month and class"
+      - name: total_claim_cost
+        description: "Sum of total_claim_cost for this month and class"
+      - name: total_payer_coverage
+        description: "Sum of payer_coverage for this month and class"
+      - name: total_member_responsibility
+        description: "Sum of member_responsibility for this month and class"
+      - name: avg_claim_cost
+        description: "Average total_claim_cost per encounter for this month and class"
+      - name: avg_encounter_duration_days
+        description: "Average encounter duration in days for this month and class"
+
+  - name: int_member_latest_vitals
+    description: "One row per member containing their most recently recorded vital signs. LOINC codes are pivoted into named columns. Used by mart_member_360."
+    columns:
+      - name: member_id
+        description: "Unique patient identifier"
+        tests:
+          - unique
+          - not_null
+      - name: latest_vital_sign_date
+        description: "Date of the observation record from which the vitals were taken"
+      - name: bmi
+        description: "Body Mass Index (LOINC 39156-5)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 10
+              max_value: 100
+              row_condition: "bmi is not null"
+      - name: bmi_category
+        description: "WHO BMI classification: Underweight (<18.5), Normal (18.5–24.9), Overweight (25–29.9), Obese (>=30)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: ['Underweight', 'Normal', 'Overweight', 'Obese']
+              row_condition: "bmi_category is not null"
+      - name: height_cm
+        description: "Body height in centimetres (LOINC 8302-2)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 50
+              max_value: 280
+              row_condition: "height_cm is not null"
+      - name: weight_kg
+        description: "Body weight in kilograms (LOINC 29463-7)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 2
+              max_value: 700
+              row_condition: "weight_kg is not null"
+      - name: systolic_bp
+        description: "Systolic blood pressure in mm[Hg] (LOINC 8480-6)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 50
+              max_value: 300
+              row_condition: "systolic_bp is not null"
+      - name: diastolic_bp
+        description: "Diastolic blood pressure in mm[Hg] (LOINC 8462-4)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 20
+              max_value: 200
+              row_condition: "diastolic_bp is not null"
+      - name: blood_pressure_category
+        description: "AHA blood pressure classification: Normal, Elevated, Hypertension Stage 1 (>=130/80), Hypertension Stage 2+ (>=140/90)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: ['Normal', 'Elevated', 'Hypertension Stage 1', 'Hypertension Stage 2+']
+              row_condition: "blood_pressure_category is not null"
+      - name: heart_rate
+        description: "Heart rate in beats per minute (LOINC 8867-4)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 20
+              max_value: 300
+              row_condition: "heart_rate is not null"
+
+  - name: int_provider_current_metrics
+    description: "One row per provider summarising their encounter volume and costs across all time and in the trailing 12 months. Used by mart_provider_performance_metrics."
+    columns:
+      - name: provider_id
+        description: "Unique provider identifier"
+        tests:
+          - unique
+          - not_null
+      - name: provider_name
+        description: "Full name of the provider"
+      - name: specialty
+        description: "Provider medical specialty"
+      - name: city
+        description: "City of the provider's practice"
+      - name: state
+        description: "State of the provider's practice"
+      - name: total_encounters
+        description: "Total number of distinct encounters the provider has delivered"
+      - name: unique_members
+        description: "Total number of distinct members the provider has treated"
+      - name: total_claim_cost
+        description: "Sum of total_claim_cost across all of the provider's encounters"
+      - name: avg_claim_cost
+        description: "Average total_claim_cost per encounter across the provider's history"
+      - name: avg_encounter_duration_days
+        description: "Average encounter duration in days across the provider's history"
+      - name: encounters_last_12_months
+        description: "Number of distinct encounters the provider delivered in the trailing 12 months"
+      - name: cost_last_12_months
+        description: "Sum of total_claim_cost for the provider's encounters in the trailing 12 months"
