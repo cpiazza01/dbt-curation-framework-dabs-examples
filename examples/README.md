@@ -71,7 +71,7 @@ databricks bundle deploy --target prod
 | `catalog: enterprise_${var.env}` | Single `env` variable drives catalog naming across all targets — no need to repeat the catalog name per target |
 | Warehouse lookup by name | `warehouse_id` uses a DABs name lookup (`"Example Warehouse"`) so the workflow isn't tied to a hard-coded warehouse ID |
 | SP lookup by name | `upstream_service_principal_id` resolves the correct SP per environment via `"example-sp-${var.env}"` — no hard-coded client IDs in config |
-| `local_dev` vs `dev` target | `local_dev` uses `mode: development` (username-prefixed resources for local work); `dev` uses `mode: production` and is what CI deploys to |
+| `local_dev` vs `dev` target | `local_dev` uses `mode: development` (username-prefixed resources for local work); `dev` uses `mode: production` and is what CI deploys to. Run `databricks bundle destroy --target local_dev` when done to clean up. |
 | `dbt_commands` with `--vars` | Passes `${var.catalog}` into dbt so `var('catalog')` in `schema.yml` resolves to the correct source catalog per environment — `dbt deps` doesn't need it, but `dbt build` and `dbt test` do |
 | `trigger_downstream_job` | Chains to a downstream reporting pipeline job after dbt completes — see `downstream_job_id` |
 | `+schema: pre_gold` on staging/intermediate | Both layers share the same holding schema before promotion to gold |

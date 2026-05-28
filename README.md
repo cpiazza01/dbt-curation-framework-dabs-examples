@@ -23,4 +23,9 @@ A reference example for the [dbt-curation-framework-dabs](https://github.com/cpi
    databricks bundle deploy --target local_dev
    ```
 
+5. When you are done testing, tear down the `local_dev` resources to avoid leaving username-prefixed jobs and tables in your workspace:
+   ```bash
+   databricks bundle destroy --target local_dev
+   ```
+
 See [examples/README.md](examples/README.md) for a full walkthrough of the example project.
